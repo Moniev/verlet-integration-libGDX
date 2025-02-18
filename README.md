@@ -5,7 +5,8 @@ This project implements the **Verlet integration algorithm** for simulating part
 ## Features  
 - **Multithreading**: Parallel computation for improved performance.  
 - **Octree-based spatial partitioning**: Reduces complexity of neighbor searches.  
-- **Stable and accurate Verlet integration**: Ensures smooth motion without numerical instability.  
+- **Stable and accurate Verlet integration**: Ensures smooth motion without numerical instability.
+- **Resolving smoothly over 8k objects.**
 
 ## Installation  
-1. **Coming soon**
+- **Coming soon**
