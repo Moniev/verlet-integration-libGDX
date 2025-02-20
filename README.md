@@ -21,10 +21,10 @@ Even further, this project employs multithreading to improve efficiency since mu
   - `git clone git://github.com/libgdx/libgdx-maven-archetype.git`
   - `cd libgdx-maven-archetype`
   - `mvn install`
-- **Clone your project repository:**
+- **Clone project repository:**
   - `git clone https://github.com/Moniev/verlet-integration-libGDX`
   - `cd verlet-integration-libGDX`
-- **Run the Maven clean and install command:**
+- **Run the Maven clean and install command:**` (Also starts program after successfully installation)`
   - `mvn clean install -Pdesktop`
 - **After the above steps, you should be able to run the program with:**
   - `mvn integration-test -Pdesktop`  
