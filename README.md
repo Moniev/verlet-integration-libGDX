@@ -4,7 +4,7 @@ This project models the motion of particles in a three-dimensional space with th
 
 ## Examples 
 ![Simulation Image](https://imgur.com/Hhu2Ma3.jpg)
-![Simulation Image]([https://imgur.com/a/tLk3HnS.jpg](https://imgur.com/GIL6cbW))
+![Simulation Image](https://imgur.com/GIL6cbW.jpg)
 
 Even further, this project employs multithreading to improve efficiency since multiple computational tasks can be done on different cores of the CPU. Instead of processing each particle one after the other, the system runs parallel updates to the positions and interactions of the particles, allowing for a faster simulation step time. This means that the system can manage a larger number of particles while still functioning at real time.
 
