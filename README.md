@@ -15,11 +15,17 @@ Even further, this project employs multithreading to improve efficiency since mu
 - **Resolving smoothly over 8k objects.**
 
 ## Installation  
-- **Installation of libGDX is needed to build maven project.**
-- **git clone git://github.com/libgdx/libgdx-maven-archetype.git
-    cd libgdx-maven-archetype
-    mvn install**
-- **After that simply git clone https://github.com/Moniev/verlet-integration-libGDX**
-- **cd verlet-integration-libGDX**
-- **mvn clean install -Pdesktop ** This shall run program as well.
-- **After above steps you should be able to run program by:** mvn integration-test -Pdesktop
+
+- **Installation of libGDX is needed to build Maven project.**
+- **Clone the libgdx-maven-archetype repository:**
+  - `git clone git://github.com/libgdx/libgdx-maven-archetype.git`
+  - `cd libgdx-maven-archetype`
+  - `mvn install`
+- **Clone your project repository:**
+  - `git clone https://github.com/Moniev/verlet-integration-libGDX`
+  - `cd verlet-integration-libGDX`
+- **Run the Maven clean and install command:**
+  - `mvn clean install -Pdesktop`
+- **After the above steps, you should be able to run the program with:**
+  - `mvn integration-test -Pdesktop`  
+
