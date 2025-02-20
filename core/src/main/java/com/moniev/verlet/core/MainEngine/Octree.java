@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.moniev.verlet.core.Particle.Particle;
 import com.moniev.verlet.core.Vector.Vector;
 
+
 public class Octree {
     public OctreeNode root;
     private final Vector gravity;
@@ -46,7 +47,7 @@ public class Octree {
         this.stepDt = stepDt;
 
         this.root = new OctreeNode(center, size, size, maxDepth, null, modelBuilder, this); 
-        this.gravity = new Vector(0, -600f, 0);    
+        this.gravity = new Vector(0, -1000f, 0);    
         this.pool = new ForkJoinPool();
         this.executor = Executors.newCachedThreadPool();
         this.innerCollisionQueue = new ConcurrentLinkedQueue<>();
@@ -199,16 +200,17 @@ public class Octree {
     }
 
     public void reflectVelocity(Particle particle, Vector normal, float subStepDt) {
-        Vector velocity = particle.getVelocity(subStepDt); 
-        
+        Vector velocity = particle.getVelocity(subStepDt);
         float velocityNormal = velocity.dotProduct(normal);
-        if(velocityNormal >= 0) return;
+    
 
-        Vector reflected = normal.multiply(2 * velocityNormal * particle.mass);
+        if (velocityNormal >= 0) return;
+    
+        Vector reflected = normal.multiply(2 * velocityNormal);
         Vector newVelocity = velocity.substract(reflected).multiply(restitution);
     
-        Vector dampedVelocity = newVelocity.multiply(dampingCoefficient);
-        particle.setVelocity(dampedVelocity, subStepDt);
+        newVelocity = newVelocity.multiply(dampingCoefficient);
+        particle.setVelocity(newVelocity, subStepDt);
     }
 
     public void resolveGravity(OctreeNode root) {
@@ -233,7 +235,7 @@ public class Octree {
         
         int numTasks = Math.min(innerCollisionQueue.size() / 10 + 1, 4);
         for (int i = 0; i < numTasks; i++) {
-            executor.execute(new CollisionSolverTask(this, innerCollisionQueue, subStepDt));
+            executor.execute(new CollisionSolverTask(innerCollisionQueue, subStepDt));
         }
     }
 
@@ -245,50 +247,7 @@ public class Octree {
         
         int numTasks = Math.min(outerCollisionQueue.size() / 10 + 1, 4);
         for (int i = 0; i < numTasks; i++) {
-            executor.execute(new CollisionSolverTask(this, outerCollisionQueue, subStepDt));
-        }
-    }
-
-    public void resolveInnerCollisions(OctreeNode root, float subStepDt) {
-        if (root == null) return; 
-
-        if(root.isLeaf) {
-            int objects = root.particles.size();
-            for(int i = 0; i < objects; i++) {
-                for(int j = i + 1; j < objects; j++) {
-                    Particle p1 = root.particles.get(i);
-                    Particle p2 = root.particles.get(j);
-                    if(checkCollision(p1, p2)){
-                        resolveCollision(p1, p2, subStepDt);
-                    }
-                }
-            }
-        } else {
-            for(OctreeNode node : root.children) {
-                resolveInnerCollisions(node, subStepDt);
-            }
-        }
-    }
-
-    public void resolveOuterCollisions(OctreeNode root, float subStepDt){
-        if(root == null) return;
-
-        if(root.isLeaf) {
-            ArrayList<OctreeNode> adjacentNodes = root.getAdjacentNodes(this.root);
-            ArrayList<Particle> outerParticles = getBorderParticles(adjacentNodes);
-            for(int i = 0; i < root.particles.size(); i++) {
-                for(int j = 0; j < outerParticles.size(); j++) {
-                    Particle p1 = root.particles.get(i);
-                    Particle p2 = outerParticles.get(j);
-                    if(checkCollision(p1, p2)) {
-                        resolveCollision(p1, p2, subStepDt);
-                    }
-                }
-            }
-        } else {
-            for(OctreeNode node : root.children) {
-                resolveOuterCollisions(node, subStepDt);
-            }
+            executor.execute(new CollisionSolverTask(outerCollisionQueue, subStepDt));
         }
     }
 
@@ -319,68 +278,6 @@ public class Octree {
 
         for(OctreeNode node : root.children) {
             findBorderNodes(node, borderNodes);
-        }
-    }
-
-    public void resolveCollision(Particle p1, Particle p2, float subStepDt) {
-        float dx = p2.position.x - p1.position.x;
-        float dy = p2.position.y - p1.position.y;
-        float dz = p2.position.z - p1.position.z;
-        
-        double dDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        float distance = (float) dDistance;
-        if (distance == 0) return;
-    
-        float radiusSum = p1.radius + p2.radius;
-        if (distance < radiusSum) {
-            float overlap = radiusSum - distance;
-            float nx = dx / distance;
-            float ny = dy / distance;
-            float nz = dz / distance;
-
-            p1.position.x -= (overlap / 2) * nx;
-            p1.position.y -= (overlap / 2) * ny;
-            p1.position.z -= (overlap / 2) * nz;
-
-            p2.position.x += (overlap / 2) * nx;
-            p2.position.y += (overlap / 2) * ny;
-            p2.position.z += (overlap / 2) * nz;
-        }
-
-        float nx = dx / distance;
-        float ny = dy / distance;
-        float nz = dz / distance;
-
-        float vx = p1.getVelocity(subStepDt).x - p2.getVelocity(subStepDt).x;
-        float vy = p1.getVelocity(subStepDt).y - p2.getVelocity(subStepDt).y;
-        float vz = p1.getVelocity(subStepDt).z - p2.getVelocity(subStepDt).z;
-    
-        float dotProduct = vx * nx + vy * ny + vz * nz;
-        float massSum = p1.mass + p2.mass;
-
-        if (dotProduct > 0) return;
-    
-        float impulse = ((2 * dotProduct) / massSum);
-    
-        p1.getVelocity(subStepDt).x -= (impulse * p2.mass * nx) * restitution;
-        p1.getVelocity(subStepDt).y -= (impulse * p2.mass * ny) * restitution;
-        p1.getVelocity(subStepDt).z -= (impulse * p2.mass * nz) * restitution;
-    
-        p2.getVelocity(subStepDt).x += (impulse * p1.mass * nx) * restitution;
-        p2.getVelocity(subStepDt).y += (impulse * p1.mass * ny) * restitution;
-        p2.getVelocity(subStepDt).z += (impulse * p1.mass * nz) * restitution;
-
-        float overlap = (p1.radius + p2.radius - distance) / 2.0f;
-        if (overlap > 0) {
-            float correction = (overlap * correctionFactor) / massSum;
-
-            p1.position.x -= (correction * overlap * nx);
-            p1.position.y -= (correction * overlap * ny);
-            p1.position.z -= (correction * overlap * nz);
-    
-            p2.position.x += (correction * overlap * nx);
-            p2.position.y += (correction * overlap * ny);
-            p2.position.z += (correction * overlap * nz);
         }
     }
 

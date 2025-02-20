@@ -6,6 +6,7 @@ import java.util.concurrent.RecursiveAction;
 
 import com.moniev.verlet.core.Particle.Particle;
 
+
 public class OuterCollisionTask extends RecursiveAction {
     private final Octree tree;
     private final OctreeNode node;

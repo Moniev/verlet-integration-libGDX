@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.moniev.verlet.core.Particle.Particle;
 import com.moniev.verlet.core.Vector.Vector;
 
+
 public class Engine {
     public final ModelBuilder modelBuilder;
     public final int particlesLimit;
@@ -20,7 +21,6 @@ public class Engine {
     public float mTime;
     public float mFrameDt;
     public Octree tree;
-
 
     public Engine(int particlesLimit, int size, int subSteps, float rate) {
         Vector center = new Vector(0, 0, 0);

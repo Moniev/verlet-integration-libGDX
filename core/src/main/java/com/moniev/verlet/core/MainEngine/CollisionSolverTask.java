@@ -4,83 +4,57 @@ import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.moniev.verlet.core.Particle.Particle;
+import com.moniev.verlet.core.Vector.Vector;
 
 public class CollisionSolverTask implements Runnable {
-    private final Octree octree;
     private final ConcurrentLinkedQueue<CollisionPair> collisionQueue;
     private final float subStepDt;
     private static final int batchSize = 10;
     private final float restitution = 0.1f;
-    private final float correctionFactor = 0.2f; 
+    private final float correctionFactor = 0.5f; 
 
-    public CollisionSolverTask(Octree octree, ConcurrentLinkedQueue<CollisionPair> collisionQueue, float subStepDt) {
-        this.octree = octree;
+    public CollisionSolverTask(ConcurrentLinkedQueue<CollisionPair> collisionQueue, float subStepDt) {
         this.collisionQueue = collisionQueue;
         this.subStepDt = subStepDt;
     }
 
     public void resolveCollision(Particle p1, Particle p2, float subStepDt) {
-        float dx = p2.position.x - p1.position.x;
-        float dy = p2.position.y - p1.position.y;
-        float dz = p2.position.z - p1.position.z;
+        Vector delta = p2.position.substract(p1.position);
+        float distance = delta.length();
         
-        double dDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        float distance = (float) dDistance;
-        if (distance == 0) return;
+        if (distance == 0) {
+            delta = new Vector(
+                (float) (Math.random() * 0.01f), 
+                (float) (Math.random() * 0.01f), 
+                (float) (Math.random() * 0.01f)
+            );
+            distance = delta.length();
+        }
     
         float radiusSum = p1.radius + p2.radius;
-        if (distance < radiusSum) {
+    
+        if (distance <= radiusSum) {
+            Vector normal = delta.subdivide(distance);
             float overlap = radiusSum - distance;
-            float nx = dx / distance;
-            float ny = dy / distance;
-            float nz = dz / distance;
-
-            p1.position.x -= (overlap / 2) * nx;
-            p1.position.y -= (overlap / 2) * ny;
-            p1.position.z -= (overlap / 2) * nz;
-
-            p2.position.x += (overlap / 2) * nx;
-            p2.position.y += (overlap / 2) * ny;
-            p2.position.z += (overlap / 2) * nz;
-        }
-
-        float nx = dx / distance;
-        float ny = dy / distance;
-        float nz = dz / distance;
-
-        float vx = p1.getVelocity(subStepDt).x - p2.getVelocity(subStepDt).x;
-        float vy = p1.getVelocity(subStepDt).y - p2.getVelocity(subStepDt).y;
-        float vz = p1.getVelocity(subStepDt).z - p2.getVelocity(subStepDt).z;
     
-        float dotProduct = vx * nx + vy * ny + vz * nz;
-        float massSum = p1.mass + p2.mass;
-
-        if (dotProduct > 0) return;
-    
-        float impulse = ((2 * dotProduct) / massSum);
-    
-        p1.getVelocity(subStepDt).x -= (impulse * p2.mass * nx) * restitution;
-        p1.getVelocity(subStepDt).y -= (impulse * p2.mass * ny) * restitution;
-        p1.getVelocity(subStepDt).z -= (impulse * p2.mass * nz) * restitution;
-    
-        p2.getVelocity(subStepDt).x += (impulse * p1.mass * nx) * restitution;
-        p2.getVelocity(subStepDt).y += (impulse * p1.mass * ny) * restitution;
-        p2.getVelocity(subStepDt).z += (impulse * p1.mass * nz) * restitution;
-
-        float overlap = (p1.radius + p2.radius - distance) / 2.0f;
-        if (overlap > 0) {
+            float massSum = p1.mass + p2.mass;
             float correction = (overlap * correctionFactor) / massSum;
-
-            p1.position.x -= (correction * overlap * nx);
-            p1.position.y -= (correction * overlap * ny);
-            p1.position.z -= (correction * overlap * nz);
     
-            p2.position.x += (correction * overlap * nx);
-            p2.position.y += (correction * overlap * ny);
-            p2.position.z += (correction * overlap * nz);
+            p1.position = p1.position.substract(normal.multiply(correction * p2.mass));
+            p2.position = p2.position.add(normal.multiply(correction * p1.mass));
+
+            Vector relativeVelocity = p1.getVelocity(subStepDt).substract(p2.getVelocity(subStepDt));
+            float velocityAlongNormal = relativeVelocity.dotProduct(normal);
+    
+            if (velocityAlongNormal > 0) return;
+    
+            float impulseMagnitude = -(1 + restitution) * velocityAlongNormal / massSum;
+            Vector impulse = normal.multiply(impulseMagnitude);
+    
+            p1.setVelocity(p1.getVelocity(subStepDt).add(impulse.multiply(p2.mass)).multiply(0.9f), subStepDt);
+            p2.setVelocity(p2.getVelocity(subStepDt).substract(impulse.multiply(p1.mass)).multiply(0.9f), subStepDt);
         }
     }
-
 
     @Override
     public void run() {

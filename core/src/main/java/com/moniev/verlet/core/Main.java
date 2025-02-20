@@ -105,6 +105,7 @@ public class Main implements ApplicationListener {
 
 	@Override
 	public void dispose () {
+		engine.tree.executor.shutdown();
 		engine.disposeParticles();
 		engine.disposeTree();
 		modelBatch.dispose();

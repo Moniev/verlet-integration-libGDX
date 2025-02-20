@@ -45,6 +45,15 @@ public class Vector {
         return new Vector(this.x / scalar, this.y / scalar, this.z / scalar);
     }
 
+    public Vector clamp(float maxLength) {
+        float length = this.length();
+        if (length > maxLength) {
+            return subdivide(length).multiply(maxLength);
+        }
+        return new Vector(this);
+    }
+    
+
     public Vector crossProduct(Vector other) {
         return new Vector(
             this.y * other.z - other.y * this.z, 
@@ -71,6 +80,10 @@ public class Vector {
         this.x = scalar;
         this.y = scalar;
         this.z = scalar;
+    }
+
+    public float length() {
+        return (float) Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2) + Math.pow(this.z, 2));
     }
 
     public float distance(Vector other) {
