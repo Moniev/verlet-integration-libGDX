@@ -6,18 +6,37 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.moniev.verlet.core.Particle.Particle;
 import com.moniev.verlet.core.Vector.Vector;
 
+/**
+ * A task that resolves collisions between particles. It processes collision pairs from the queue
+ * and resolves the collisions by adjusting the positions and velocities of the particles involved.
+ * This task is intended to be executed in a separate thread for concurrency.
+ */
 public class CollisionSolverTask implements Runnable {
-    private final ConcurrentLinkedQueue<CollisionPair> collisionQueue;
-    private final float subStepDt;
-    private static final int batchSize = 10;
-    private final float restitution = 0.1f;
-    private final float correctionFactor = 0.5f; 
+    private final ConcurrentLinkedQueue<CollisionPair> collisionQueue; // Queue containing collision pairs
+    private final float subStepDt; // Time step for the simulation
+    private static final int BATCHSIZE = 10; // Number of collision pairs to process in each batch
+    private final float restitution = 0.1f; // Coefficient of restitution for collision resolution
+    private final float correctionFactor = 0.5f; // Correction factor for particle position adjustment
 
+    /**
+     * Constructs a CollisionSolverTask with the specified collision queue and time step.
+     * 
+     * @param collisionQueue the queue of collision pairs to process
+     * @param subStepDt the time step for each simulation substep
+     */
     public CollisionSolverTask(ConcurrentLinkedQueue<CollisionPair> collisionQueue, float subStepDt) {
         this.collisionQueue = collisionQueue;
         this.subStepDt = subStepDt;
     }
 
+    /**
+     * Resolves a collision between two particles by adjusting their positions and velocities.
+     * This includes calculating overlap, correcting positions, and applying an impulse for velocity adjustment.
+     * 
+     * @param p1 the first particle involved in the collision
+     * @param p2 the second particle involved in the collision
+     * @param subStepDt the time step for the simulation
+     */
     public void resolveCollision(Particle p1, Particle p2, float subStepDt) {
         Vector delta = p2.position.substract(p1.position);
         float distance = delta.length();
@@ -56,12 +75,16 @@ public class CollisionSolverTask implements Runnable {
         }
     }
 
+    /**
+     * Processes the collision queue by resolving collisions in batches.
+     * Each batch processes a set of collision pairs to avoid processing too many at once.
+     */
     @Override
     public void run() {
         while (!collisionQueue.isEmpty()) {
-            ArrayList<CollisionPair> batch = new ArrayList<>(batchSize);
+            ArrayList<CollisionPair> batch = new ArrayList<>(BATCHSIZE);
             
-            for (int i = 0; i < batchSize; i++) {
+            for (int i = 0; i < BATCHSIZE; i++) {
                 CollisionPair pair = collisionQueue.poll();
                 if (pair == null) break;
                 batch.add(pair);

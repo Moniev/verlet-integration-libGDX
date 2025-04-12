@@ -2,7 +2,6 @@ package com.moniev.verlet.java;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-
 import com.moniev.verlet.core.Main;
 
 public class MainDesktop {

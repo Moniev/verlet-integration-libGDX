@@ -11,28 +11,43 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.moniev.verlet.core.Particle.Particle;
 import com.moniev.verlet.core.Vector.Vector;
 
-
+/**
+ * OctreeNode represents a node in an octree used for spatial partitioning of particles.
+ * It can subdivide into 8 child nodes when the number of particles exceeds a limit.
+ */
 public class OctreeNode {
-    public final int particlesLimit, depthLimit;
     
-    public final float minX, minY, minZ;
-    public final float maxX, maxY, maxZ;
+    public final int particlesLimit, depthLimit;  // The limit on the number of particles a node can hold and the maximum depth of the octree node
 
-    private final float size, halfSize, quarterSize;
+    public final float minX, minY, minZ;  // Minimum coordinates (X, Y, Z) defining the lower bounds of the octree node
+    public final float maxX, maxY, maxZ;  // Maximum coordinates (X, Y, Z) defining the upper bounds of the octree node
 
-    public final Vector center;
+    private final float size, halfSize, quarterSize;  // The size of the node and its subdivisions (half and quarter size for efficient calculations)
 
-    private Octree tree;
-    public OctreeNode parent;
-    public OctreeNode[] children;
-    public ArrayList<Particle> particles;
+    public final Vector center;  // The center point of the octree node, representing the average position of all particles within it
 
-    public boolean isLeaf, isBorder;
+    private final Octree tree;  // Reference to the octree structure that this node belongs to
+    public OctreeNode parent;  // The parent node in the octree, linking back to the higher level
+    public OctreeNode[] children;  // The child nodes in the octree, each representing a subdivision of the space
+    public ArrayList<Particle> particles;  // List of particles contained within this node
 
-    public final Model model;
-    public final ModelInstance modelInstance;
-    private final ModelBuilder modelBuilder;
+    public boolean isLeaf, isBorder;  // Boolean flags: isLeaf indicates if this node has no children (leaf node), isBorder indicates if it's near the boundary of the space
 
+    public final Model model;  // The 3D model representation of the octree node for visualization or rendering
+    public final ModelInstance modelInstance;  // An instance of the model used for rendering in the scene
+    private final ModelBuilder modelBuilder;  // A builder used to construct the 3D model for the octree node
+
+    /**
+     * Constructs an OctreeNode with the specified parameters.
+     * 
+     * @param center The center of the node.
+     * @param size The size of the node.
+     * @param particlesLimit The maximum number of particles that can be held by this node.
+     * @param depthLimit The maximum depth this node can have.
+     * @param parent The parent of this node in the octree.
+     * @param modelBuilder The model builder used to construct the node's 3D model.
+     * @param tree The octree structure this node belongs to.
+     */
     public OctreeNode(Vector center, float size, int particlesLimit, int depthLimit, OctreeNode parent, ModelBuilder modelBuilder, Octree tree) {
         this.tree = tree;
         this.parent = parent;
@@ -64,6 +79,11 @@ public class OctreeNode {
         this.isBorder = isBorder();
     }
 
+    /**
+     * Checks if this node is on the boundary of the octree.
+     * 
+     * @return true if the node is on the boundary, false otherwise.
+     */
     private boolean isBorder() {
         return !(
             minX <= tree.minX || maxX >= tree.maxX ||
@@ -72,10 +92,20 @@ public class OctreeNode {
         );
     }
 
+    /**
+     * Checks if this node is empty (no particles).
+     * 
+     * @return true if the node contains no particles, false otherwise.
+     */
     public boolean isEmpty() {
         return particles.isEmpty();
     }
 
+    /**
+     * Creates a wireframe model of the octree node for visualization.
+     * 
+     * @return The 3D model representing the octree node.
+     */
     private Model createWireframeModel() {
         float x = center.x;
         float y = center.y;
@@ -116,6 +146,11 @@ public class OctreeNode {
         return modelBuilder.end();
     }   
 
+    /**
+     * Creates a model instance to represent this node in the 3D scene.
+     * 
+     * @return The model instance representing the octree node.
+     */
     private ModelInstance createModelInstance() {
         ModelInstance newModelInstance = new ModelInstance(model);
         newModelInstance.transform.setToTranslation(
@@ -126,6 +161,12 @@ public class OctreeNode {
         return newModelInstance;
     }
 
+    /**
+     * Inserts a particle into this node. If the number of particles exceeds the limit, 
+     * the node will subdivide and redistribute the particles among the children.
+     * 
+     * @param particle The particle to insert into the node.
+     */
     public void insert(Particle particle) {
         if (isLeaf) {
             particles.add(particle);
@@ -143,7 +184,9 @@ public class OctreeNode {
         }
     }
     
-
+    /**
+     * Subdivides this node into 8 child nodes.
+     */
     public void subdivide() {
         for(int i = 0; i < 8; i++) {
             float xOffSet = ((i & 1) == 0) ? -quarterSize : quarterSize;
@@ -160,6 +203,9 @@ public class OctreeNode {
         isLeaf = false; 
     }
 
+    /**
+     * Redistributes the particles of this node to its child nodes.
+     */
     public void redistributeParticles() {
         ArrayList<Particle> temp = new ArrayList<>(particles);
         particles.clear();
@@ -174,6 +220,12 @@ public class OctreeNode {
         }
     } 
 
+    /**
+     * Returns the index of the child node for the given position.
+     * 
+     * @param position The position to determine the child index for.
+     * @return The index of the child node (0 to 7).
+     */
     public int getChildIndex(Vector position) {
         int index = 0;
         if (position.x >= center.x) index |= 1;
@@ -182,6 +234,12 @@ public class OctreeNode {
         return index;
     }    
 
+    /**
+     * Checks if this node is adjacent to another octree node.
+     * 
+     * @param node The octree node to check for adjacency.
+     * @return true if the nodes are adjacent, false otherwise.
+     */
     public boolean isAdjacent(OctreeNode node) {
         boolean overlapX = maxX >= node.minX && minX <= node.maxX;
         boolean overlapY = maxY >= node.minY && minY <= node.maxY;
@@ -189,29 +247,53 @@ public class OctreeNode {
         return overlapX && overlapY && overlapZ;
     }
 
+    /**
+     * Checks if a given particle is near the border of this node.
+     * A particle is considered near the border if its distance to the node's boundary 
+     * is less than a specified margin.
+     * 
+     * @param particle The particle to check.
+     * @return true if the particle is near the border of this node, false otherwise.
+     */
     public boolean isNearBorder(Particle particle) {
         float margin = particle.radius * 1.25f;
-    
+        
         return (
             particle.position.x - margin < minX || particle.position.x + margin > maxX ||
             particle.position.y - margin < minY || particle.position.y + margin > maxY ||
             particle.position.z - margin < minZ || particle.position.z + margin > maxZ
         );
     }
-    
 
+    /**
+     * Retrieves all adjacent octree nodes for a given root node.
+     * This method searches through the octree structure to find nodes that are adjacent 
+     * to the current node.
+     * 
+     * @param root The root node of the octree to start the search from.
+     * @return A list of adjacent octree nodes.
+     */
     public ArrayList<OctreeNode> getAdjacentNodes(OctreeNode root) {
         ArrayList<OctreeNode> adjacentNodes = new ArrayList<>();
         findAdjacentNodes(root, adjacentNodes);
         return adjacentNodes;
     }
 
+    /**
+     * Recursively searches for adjacent octree nodes starting from the given root node.
+     * This method adds adjacent nodes to the provided list of adjacent nodes.
+     * 
+     * @param root The root node of the octree to start the search from.
+     * @param adjacentNodes The list to store the adjacent nodes.
+     */
     public void findAdjacentNodes(OctreeNode root, ArrayList<OctreeNode> adjacentNodes) {
         if (root == null) return;
 
+        // Check if the node is a leaf and is adjacent to the current node
         if(root.isLeaf && isAdjacent(root) && this != root) {
             adjacentNodes.add(root);
         } else if (!root.isLeaf) {
+            // Recursively search through the children of non-leaf nodes
             for(OctreeNode node : root.children) {
                 findAdjacentNodes(node, adjacentNodes);
             }
