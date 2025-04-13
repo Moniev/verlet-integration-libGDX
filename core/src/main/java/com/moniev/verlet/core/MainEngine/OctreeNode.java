@@ -241,10 +241,23 @@ public class OctreeNode {
      * @return true if the nodes are adjacent, false otherwise.
      */
     public boolean isAdjacent(OctreeNode node) {
+        double sizeThis = maxX - minX;
+        double sizeOther = node.maxX - node.minX;
+        if (sizeThis != sizeOther) {
+            return false; 
+        }
+
+        boolean touchX = maxX == node.minX || minX == node.maxX;
+        boolean touchY = maxY == node.minY || minY == node.maxY;
+        boolean touchZ = maxZ == node.minZ || minZ == node.maxZ;
+
         boolean overlapX = maxX >= node.minX && minX <= node.maxX;
         boolean overlapY = maxY >= node.minY && minY <= node.maxY;
         boolean overlapZ = maxZ >= node.minZ && minZ <= node.maxZ;
-        return overlapX && overlapY && overlapZ;
+
+        return (touchX && overlapY && overlapZ) ||
+            (touchY && overlapX && overlapZ) ||
+            (touchZ && overlapX && overlapY);
     }
 
     /**
@@ -289,11 +302,9 @@ public class OctreeNode {
     public void findAdjacentNodes(OctreeNode root, ArrayList<OctreeNode> adjacentNodes) {
         if (root == null) return;
 
-        // Check if the node is a leaf and is adjacent to the current node
         if(root.isLeaf && isAdjacent(root) && this != root) {
             adjacentNodes.add(root);
         } else if (!root.isLeaf) {
-            // Recursively search through the children of non-leaf nodes
             for(OctreeNode node : root.children) {
                 findAdjacentNodes(node, adjacentNodes);
             }
